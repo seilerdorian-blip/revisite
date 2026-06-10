@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<!-- saved from url=(0054)file:///C:/Users/seile/Downloads/swot_lake_viewer.html -->
+<html lang="fr"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWOT Lake Viewer</title>
+  <link rel="stylesheet" href="./SWOT Lake Viewer_files/leaflet.min.css">
+  <link rel="stylesheet" href="./SWOT Lake Viewer_files/tabler-icons.min.css">
+  <script src="./SWOT Lake Viewer_files/leaflet.min.js.télécharger"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a1a;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Toolbar ── */
+    #toolbar {
+      background: #fff;
+      border-bottom: 1px solid #e2e4e8;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      z-index: 1000;
+    }
+
+    #toolbar-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a1a;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+    }
+
+    #toolbar-title i { font-size: 18px; color: #378ADD; }
+
+    #drop-zone {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1.5px dashed #c5c8d0;
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      user-select: none;
+    }
+
+    #drop-zone:hover { background: #f5f7fa; border-color: #378ADD; color: #185FA5; }
+    #drop-zone.drag-over { background: #EBF4FD; border-color: #378ADD; color: #185FA5; }
+    #drop-zone i { font-size: 16px; }
+
+    #date-field-wrap {
+      display: none;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      color: #666;
+    }
+
+    #date-field-select {
+      font-size: 13px;
+      padding: 4px 8px;
+      border: 1px solid #d0d3da;
+      border-radius: 6px;
+      background: #fff;
+      color: #1a1a1a;
+      cursor: pointer;
+    }
+
+    #legend {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.6);
+    }
+
+    /* ── Animation progress bar ── */
+    #anim-bar {
+      height: 3px;
+      background: #e8eaed;
+      display: none;
+      flex-shrink: 0;
+    }
+
+    #anim-progress {
+      height: 100%;
+      background: #378ADD;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Navigation bar ── */
+    #nav-bar {
+      background: #fff;
+      border-bottom: 1px solid #e2e4e8;
+      padding: 8px 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .nav-btn {
+      background: none;
+      border: 1px solid #d0d3da;
+      border-radius: 7px;
+      padding: 5px 10px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: background 0.1s;
+    }
+
+    .nav-btn:hover { background: #f5f7fa; }
+    .nav-btn:active { background: #ebedf0; }
+    .nav-btn:disabled { opacity: 0.35; cursor: default; }
+
+    #slider-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #date-slider {
+      flex: 1;
+      cursor: pointer;
+      accent-color: #378ADD;
+      height: 4px;
+    }
+
+    #play-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      border: 1px solid #d0d3da;
+      background: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #333;
+      transition: background 0.1s;
+      flex-shrink: 0;
+    }
+
+    #play-btn:hover { background: #f5f7fa; }
+
+    #date-label {
+      font-size: 13px;
+      font-weight: 600;
+      min-width: 130px;
+      color: #1a1a1a;
+    }
+
+    #date-counter {
+      font-size: 12px;
+      color: #999;
+      white-space: nowrap;
+    }
+
+    /* ── Map container ── */
+    #map-container {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    #map { width: 100%; height: 100%; }
+
+    /* ── Empty state ── */
+    #empty-state {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #aaa;
+      pointer-events: none;
+      z-index: 400;
+    }
+
+    #empty-state i { font-size: 52px; opacity: 0.25; }
+    #empty-state p { font-size: 14px; }
+    #empty-state small { font-size: 12px; color: #bbb; }
+
+    /* ── Info panel ── */
+    #info-panel {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 240px;
+      background: #fff;
+      border: 1px solid #e2e4e8;
+      border-radius: 10px;
+      padding: 14px;
+      z-index: 500;
+      display: none;
+      max-height: calc(100% - 24px);
+      overflow-y: auto;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    }
+
+    #info-panel-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      gap: 8px;
+    }
+
+    #info-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1a1a;
+      line-height: 1.35;
+    }
+
+    #info-close {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #999;
+      font-size: 16px;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    #info-close:hover { color: #333; }
+
+    .attr-section {
+      margin-bottom: 10px;
+    }
+
+    .attr-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #999;
+      margin-bottom: 5px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .attr-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 3px 0;
+      font-size: 12px;
+    }
+
+    .attr-key {
+      color: #888;
+      flex: 0 0 auto;
+      max-width: 105px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .attr-val {
+      font-weight: 500;
+      text-align: right;
+      word-break: break-word;
+      color: #1a1a1a;
+    }
+
+    /* ── Badges qualité ── */
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-ok { background: #EAF3DE; color: #27500A; }
+    .badge-warn { background: #FAEEDA; color: #633806; }
+    .badge-bad { background: #FCEBEB; color: #791F1F; }
+    .badge-info { background: #E6F1FB; color: #0C447C; }
+
+    /* ── Stats bar ── */
+    #stats-bar {
+      display: none;
+      position: absolute;
+      bottom: 24px;
+      left: 12px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #e2e4e8;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      color: #555;
+      z-index: 500;
+      backdrop-filter: blur(4px);
+      display: none;
+      gap: 16px;
+    }
+
+    .stat-item { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+    .stat-val { font-size: 15px; font-weight: 600; color: #1a1a1a; }
+    .stat-lbl { font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* ── Scrollbar ── */
+    #info-panel::-webkit-scrollbar { width: 5px; }
+    #info-panel::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+  </style>
+</head>
+<body class="">
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <div id="toolbar-title">
+      <i class="ti ti-satellite" aria-hidden="true"></i>
+      SWOT Lake Viewer
+    </div>
+
+    <div id="drop-zone" onclick="document.getElementById(&#39;file-input&#39;).click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+      <i class="ti ti-upload" aria-hidden="true"></i>
+      Charger le GeoJSON
+    </div>
+    <input type="file" id="file-input" accept=".geojson,.json" style="display:none" onchange="handleFileInput(event)">
+
+    <div id="date-field-wrap" style="display: flex;">
+      <i class="ti ti-calendar" aria-hidden="true" style="font-size:14px;color:#888"></i>
+      <span>Champ date :</span>
+      <select id="date-field-select" onchange="initTimeline()"><option value="_fuid">_fuid</option><option value="cycle_numb">cycle_numb</option><option value="pass_numbe">pass_numbe</option><option value="wse">wse</option><option value="wse_u">wse_u</option><option value="wse_r_u">wse_r_u</option><option value="wse_std">wse_std</option><option value="geoid_hght">geoid_hght</option><option value="xtrk_dist">xtrk_dist</option><option value="dark_frac">dark_frac</option><option value="partial_f">partial_f</option><option value="ice_clim_f">ice_clim_f</option><option value="quality_f">quality_f</option><option value="xovr_cal_q">xovr_cal_q</option><option value="xovr_cal_c">xovr_cal_c</option><option value="layovr_val">layovr_val</option><option value="qual_f_b">qual_f_b</option><option value="time_str">time_str</option></select>
+    </div>
+
+    <div id="legend" style="display: flex;">
+      <span style="font-weight:500;color:#555">Qualité :</span>
+      <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div><span>Bonne (0)</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#BA7517"></div><span>Douteuse (1)</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#E24B4A"></div><span>Mauvaise (≥2)</span></div>
+      <div class="legend-item" id="legend-wse" style="display:none"><div class="legend-dot" style="background:#378ADD"></div><span>Hauteur d'eau</span></div>
+    </div>
+  </div>
+
+  <!-- Animation progress bar -->
+  <div id="anim-bar" style="display: block;"><div id="anim-progress" style="width: 26.3158%;"></div></div>
+
+  <!-- Navigation bar -->
+  <div id="nav-bar" style="display: flex;">
+    <button class="nav-btn" id="btn-prev" onclick="navigate(-1)">
+      <i class="ti ti-chevron-left" aria-hidden="true"></i> Préc.
+    </button>
+    <div id="slider-wrap">
+      <input type="range" id="date-slider" min="0" max="190" value="0" oninput="showFeature(parseInt(this.value))">
+    </div>
+    <button class="nav-btn" id="btn-next" onclick="navigate(1)">
+      Suiv. <i class="ti ti-chevron-right" aria-hidden="true"></i>
+    </button>
+    <button id="play-btn" title="Lecture automatique" onclick="togglePlay()">
+      <i class="ti ti-player-play" id="play-icon"></i>
+    </button>
+    <span id="date-label">22 mai 2023</span>
+    <span id="date-counter">51 / 191</span>
+  </div>
+
+  <!-- Map -->
+  <div id="map-container">
+    <div id="map" class="leaflet-container leaflet-touch leaflet-retina leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0" style="position: relative;"><div class="leaflet-pane leaflet-map-pane" style="transform: translate3d(1142px, -195px, 0px);"><div class="leaflet-pane leaflet-tile-pane"><div class="leaflet-layer " style="z-index: 1; opacity: 1;"><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 18; transform: translate3d(102px, -137px, 0px) scale(2);"></div><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 19; transform: translate3d(318px, -553px, 0px) scale(1);"><img alt="" src="./SWOT Lake Viewer_files/730.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-826px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-826px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(1).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1082px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(2).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-570px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(1).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1082px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(2).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-570px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-826px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-826px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(1).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1082px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(2).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-570px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(1).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1082px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(2).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-570px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(3).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1338px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(4).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-314px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(3).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1338px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(4).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-314px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(3).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1338px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(4).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-314px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(3).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1338px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(4).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-314px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(5).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1594px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/730(6).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-58px, 878px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(5).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1594px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/731(6).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-58px, 1134px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(5).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1594px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/729(6).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-58px, 622px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(5).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-1594px, 1390px, 0px); opacity: 1;"><img alt="" src="./SWOT Lake Viewer_files/732(6).png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-58px, 1390px, 0px); opacity: 1;"></div></div></div><div class="leaflet-pane leaflet-overlay-pane"><svg pointer-events="none" class="leaflet-zoom-animated" width="1718" height="817" viewBox="-1285 127 1718 817" style="transform: translate3d(-1285px, 127px, 0px);"><g><path class="leaflet-interactive" stroke="#fff" stroke-opacity="1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="#E24B4A" fill-opacity="0.68" fill-rule="evenodd" d="M-371 625L-373 636L-373 660L-372 663L-370 663L-369 670L-372 681L-374 683L-372 687L-374 689L-376 696L-386 696L-390 698L-406 698L-403 697L-403 695L-407 695L-411 691L-410 686L-413 688L-412 687L-414 684L-421 686L-424 683L-423 667L-426 660L-426 639L-423 630L-424 620L-422 618L-419 607L-419 591L-422 575L-421 574L-422 569L-424 567L-427 546L-431 534L-435 529L-440 515L-444 510L-443 509L-448 498L-447 495L-452 490L-450 484L-455 479L-456 472L-460 466L-459 459L-461 453L-460 452L-462 450L-462 434L-464 434L-466 430L-467 421L-469 419L-472 409L-478 401L-479 394L-482 393L-483 391L-483 382L-480 379L-480 377L-479 378L-476 375L-475 376L-469 373L-462 375L-458 380L-457 379L-451 382L-448 389L-445 386L-439 384L-435 386L-434 385L-434 387L-433 386L-431 388L-429 400L-426 403L-425 408L-418 419L-407 452L-406 471L-396 480L-394 480L-388 494L-379 505L-375 513L-375 517L-380 522L-392 520L-395 524L-395 530L-392 535L-393 536L-391 546L-393 549L-384 557L-376 570L-380 576L-379 577L-386 584L-385 587L-387 591L-380 610L-373 613L-371 616L-371 624z" aria-describedby="leaflet-tooltip-9296"></path></g></svg></div><div class="leaflet-pane leaflet-shadow-pane"></div><div class="leaflet-pane leaflet-marker-pane"></div><div class="leaflet-pane leaflet-tooltip-pane"></div><div class="leaflet-pane leaflet-popup-pane"></div><div class="leaflet-proxy leaflet-zoom-animated" style="transform: translate3d(270674px, 187090px, 0px) scale(1024);"></div></div><div class="leaflet-control-container"><div class="leaflet-top leaflet-left"><div class="leaflet-control-zoom leaflet-bar leaflet-control"><a class="leaflet-control-zoom-in" href="file:///C:/Users/seile/Downloads/swot_lake_viewer.html#" title="Zoom in" role="button" aria-label="Zoom in" aria-disabled="false"><span aria-hidden="true">+</span></a><a class="leaflet-control-zoom-out" href="file:///C:/Users/seile/Downloads/swot_lake_viewer.html#" title="Zoom out" role="button" aria-label="Zoom out" aria-disabled="false"><span aria-hidden="true">−</span></a></div></div><div class="leaflet-top leaflet-right"><div class="leaflet-control-layers leaflet-control" aria-haspopup="true"><a class="leaflet-control-layers-toggle" href="file:///C:/Users/seile/Downloads/swot_lake_viewer.html#" title="Layers" role="button"></a><section class="leaflet-control-layers-list"><div class="leaflet-control-layers-base"><label><span><input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers_75" checked="checked"><span> OpenStreetMap</span></span></label><label><span><input type="radio" class="leaflet-control-layers-selector" name="leaflet-base-layers_75"><span> Satellite (Esri)</span></span></label></div><div class="leaflet-control-layers-separator" style="display: none;"></div><div class="leaflet-control-layers-overlays"></div></section></div></div><div class="leaflet-bottom leaflet-left"></div><div class="leaflet-bottom leaflet-right"><div class="leaflet-control-attribution leaflet-control"><a href="https://leafletjs.com/" title="A JavaScript library for interactive maps"><svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="12" height="8" viewBox="0 0 12 8" class="leaflet-attribution-flag"><path fill="#4C7BE1" d="M0 0h12v4H0z"></path><path fill="#FFD500" d="M0 4h12v3H0z"></path><path fill="#E0BC00" d="M0 7h12v1H0z"></path></svg> Leaflet</a> <span aria-hidden="true">|</span> © <a href="https://openstreetmap.org/">OpenStreetMap</a> contributors</div></div></div></div>
+
+    <!-- Empty state -->
+    <div id="empty-state" style="display: none;">
+      <i class="ti ti-droplet" aria-hidden="true"></i>
+      <p>Chargez un fichier GeoJSON pour commencer</p>
+      <small>Glisser-déposer ou cliquer sur le bouton ci-dessus</small>
+    </div>
+
+    <!-- Info panel -->
+    <div id="info-panel" role="complementary" aria-label="Attributs de la télédétection" style="display: none;">
+      <div id="info-panel-header">
+        <h3 id="info-title">Attributs</h3>
+        <button id="info-close" onclick="document.getElementById(&#39;info-panel&#39;).style.display=&#39;none&#39;" title="Fermer" aria-label="Fermer le panneau">
+          <i class="ti ti-x" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div id="info-content"></div>
+    </div>
+
+    <!-- Stats bar -->
+    <div id="stats-bar" style="display: flex;">
+      <div class="stat-item"><span class="stat-val" id="stat-wse">230.90 m</span><span class="stat-lbl">Hauteur (m)</span></div>
+      <div class="stat-item"><span class="stat-val" id="stat-area">—</span><span class="stat-lbl">Aire (km²)</span></div>
+      <div class="stat-item"><span class="stat-val" id="stat-quality"><span class="badge badge-bad" style="font-size:11px">✗</span></span><span class="stat-lbl">Qualité</span></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Initialisation de la carte ──
+    const map = L.map('map', { zoomControl: true }).setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    // Couche satellite (basculable)
+    const satelliteLayer = L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      { attribution: '© Esri', maxZoom: 19 }
+    );
+
+    L.control.layers(
+      { 'OpenStreetMap': map._layers[Object.keys(map._layers)[0]], 'Satellite (Esri)': satelliteLayer },
+      {}
+    ).addTo(map);
+
+    // ── État global ──
+    let allFeatures = [];
+    let sortedDates = [];
+    let currentIdx = 0;
+    let currentLayer = null;
+    let playInterval = null;
+    let hasQualityField = false;
+
+    const DATE_FIELDS = ['time_str', 'time', 'date', 'datetime', 'pass_date', 'overpass', 'time_tai'];
+
+    // ── Groupes d'attributs SWOT pour affichage organisé ──
+    const ATTR_GROUPS = {
+      'Identification': ['lake_id', 'lake_name', 'obs_id', 'reach_id'],
+      'Mesure principale': ['wse', 'wse_std', 'wse_q1', 'wse_q3', 'wse_r68', 'wse_units'],
+      'Surface & volume': ['area_total', 'area_detct', 'area_units', 'storage_flt', 'p_storage', 'p_area'],
+      'Qualité': ['quality_f', 'obs_frac_n', 'layovr_val', 'xovr_cal_q'],
+      'Géodésie': ['geoid_hght', 'geoid_slop'],
+      'Orbite': ['cycle_id', 'pass_id', 'continent_id', 'time_tai']
+    };
+
+    // ── Parsing / formatage des dates ──
+    function parseDate(v) {
+      if (v === null || v === undefined) return null;
+      const s = String(v);
+      const d = new Date(s.includes('T') ? s : s.replace(' ', 'T'));
+      if (!isNaN(d)) return d;
+      const m = s.match(/^(\d{4})(\d{2})(\d{2})/);
+      if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+      return null;
+    }
+
+    function formatDate(v) {
+      const d = parseDate(v);
+      if (!d) return String(v);
+      return d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+
+    function formatDateShort(v) {
+      const d = parseDate(v);
+      if (!d) return String(v);
+      return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    // ── Badge qualité ──
+    function qualityBadge(v) {
+      if (v === null || v === undefined) return '—';
+      const n = parseFloat(v);
+      if (isNaN(n)) return `<span class="badge badge-info">${v}</span>`;
+      if (n === 0) return `<span class="badge badge-ok"><i class="ti ti-circle-check" style="font-size:11px;vertical-align:-1px"></i> Bonne (0)</span>`;
+      if (n <= 1) return `<span class="badge badge-warn"><i class="ti ti-alert-triangle" style="font-size:11px;vertical-align:-1px"></i> Douteuse (${n})</span>`;
+      return `<span class="badge badge-bad"><i class="ti ti-circle-x" style="font-size:11px;vertical-align:-1px"></i> Mauvaise (${n})</span>`;
+    }
+
+    // ── Couleur d'un polygone ──
+    function getColor(props, minWse, maxWse) {
+      const q = props['quality_f'];
+      if (q !== null && q !== undefined) {
+        const n = parseFloat(q);
+        if (!isNaN(n)) {
+          if (n === 0) return '#1D9E75';
+          if (n <= 1) return '#BA7517';
+          return '#E24B4A';
+        }
+      }
+      // Fallback : dégradé par hauteur d'eau
+      const wse = parseFloat(props['wse']);
+      if (!isNaN(wse) && maxWse > minWse) {
+        const t = (wse - minWse) / (maxWse - minWse);
+        const r = Math.round(55 + t * 200);
+        const b = Math.round(255 - t * 200);
+        return `rgb(${r}, 130, ${b})`;
+      }
+      return '#378ADD';
+    }
+
+    // ── Panneau info ──
+    function renderInfoPanel(props) {
+      const panel = document.getElementById('info-panel');
+      panel.style.display = 'block';
+      const dateF = getDateField();
+      document.getElementById('info-title').textContent = props[dateF] ? formatDate(props[dateF]) : 'Télédétection';
+
+      // Trier les attributs par groupes
+      const usedKeys = new Set();
+      let html = '';
+
+      for (const [groupName, keys] of Object.entries(ATTR_GROUPS)) {
+        const available = keys.filter(k => props[k] !== undefined && props[k] !== null);
+        if (!available.length) continue;
+        html += `<div class="attr-section"><div class="attr-section-title">${groupName}</div>`;
+        for (const k of available) {
+          const v = props[k];
+          let display;
+          if (k === dateF) display = formatDate(v);
+          else if (k === 'quality_f') display = qualityBadge(v);
+          else if (['wse', 'wse_std', 'wse_q1', 'wse_q3', 'wse_r68', 'geoid_hght', 'geoid_slop'].includes(k) && !isNaN(parseFloat(v)))
+            display = parseFloat(v).toFixed(3) + ' m';
+          else if (['area_total', 'area_detct'].includes(k) && !isNaN(parseFloat(v)))
+            display = parseFloat(v).toFixed(2) + ' km²';
+          else if (['storage_flt', 'p_storage'].includes(k) && !isNaN(parseFloat(v)))
+            display = parseFloat(v).toFixed(4) + ' km³';
+          else if (['obs_frac_n', 'layovr_val'].includes(k) && !isNaN(parseFloat(v)))
+            display = (parseFloat(v) * 100).toFixed(1) + ' %';
+          else display = (v === null || v === undefined) ? '—' : String(v);
+          usedKeys.add(k);
+          html += `<div class="attr-row"><span class="attr-key" title="${k}">${k}</span><span class="attr-val">${display}</span></div>`;
+        }
+        html += `</div>`;
+      }
+
+      // Attributs non groupés
+      const others = Object.keys(props).filter(k => !usedKeys.has(k) && k !== dateF);
+      if (others.length) {
+        html += `<div class="attr-section"><div class="attr-section-title">Autres</div>`;
+        for (const k of others) {
+          const v = props[k];
+          const display = (v === null || v === undefined) ? '—' : String(v);
+          html += `<div class="attr-row"><span class="attr-key" title="${k}">${k}</span><span class="attr-val">${display}</span></div>`;
+        }
+        html += `</div>`;
+      }
+
+      document.getElementById('info-content').innerHTML = html;
+    }
+
+    // ── Affichage d'une date ──
+    function showFeature(idx) {
+      currentIdx = idx;
+      const date = sortedDates[idx];
+      const dateF = getDateField();
+      const features = allFeatures.filter(f => f.properties[dateF] === date);
+
+      if (currentLayer) { map.removeLayer(currentLayer); }
+
+      const wseValues = features.map(f => parseFloat(f.properties['wse'])).filter(v => !isNaN(v));
+      const minWse = wseValues.length ? Math.min(...wseValues) : 0;
+      const maxWse = wseValues.length ? Math.max(...wseValues) : 1;
+
+      currentLayer = L.geoJSON(
+        { type: 'FeatureCollection', features },
+        {
+          style: f => ({
+            fillColor: getColor(f.properties, minWse, maxWse),
+            color: '#fff',
+            weight: 1.5,
+            fillOpacity: 0.68,
+            opacity: 1
+          }),
+          onEachFeature: (f, layer) => {
+            layer.on('click', () => renderInfoPanel(f.properties));
+
+            // Highlight au survol
+            layer.on('mouseover', function () {
+              this.setStyle({ weight: 2.5, color: '#333', fillOpacity: 0.82 });
+              this.bringToFront();
+            });
+            layer.on('mouseout', function () {
+              currentLayer.resetStyle(this);
+            });
+
+            layer.bindTooltip(() => {
+              const d = formatDateShort(f.properties[dateF]);
+              const wse = f.properties['wse'];
+              const area = f.properties['area_total'];
+              const q = f.properties['quality_f'];
+              let t = `<b>${d}</b>`;
+              if (wse !== null && wse !== undefined) t += `<br><i class='ti ti-waves-electricity' style='font-size:11px'></i> Hauteur : <b>${parseFloat(wse).toFixed(3)} m</b>`;
+              if (area !== null && area !== undefined) t += `<br><i class='ti ti-focus-2' style='font-size:11px'></i> Aire : ${parseFloat(area).toFixed(2)} km²`;
+              if (q !== null && q !== undefined) {
+                const n = parseFloat(q);
+                const qLabel = isNaN(n) ? q : (n === 0 ? '✓ Bonne' : n <= 1 ? '⚠ Douteuse' : '✗ Mauvaise');
+                t += `<br>Qualité : ${qLabel}`;
+              }
+              t += `<br><span style='font-size:10px;opacity:0.6'>Cliquer pour les détails</span>`;
+              return t;
+            }, { sticky: true, opacity: 0.92 });
+          }
+        }
+      ).addTo(map);
+
+      if (currentLayer.getBounds().isValid()) {
+        map.fitBounds(currentLayer.getBounds(), { padding: [30, 30], maxZoom: 14 });
+      }
+
+      // Mise à jour de l'UI
+      document.getElementById('date-label').textContent = formatDate(date);
+      document.getElementById('date-counter').textContent = `${idx + 1} / ${sortedDates.length}`;
+      document.getElementById('date-slider').value = idx;
+      document.getElementById('anim-progress').style.width = ((idx / (sortedDates.length - 1)) * 100) + '%';
+      document.getElementById('btn-prev').disabled = idx === 0;
+      document.getElementById('btn-next').disabled = idx === sortedDates.length - 1;
+
+      // Mise à jour de la stats bar
+      if (features.length > 0) {
+        const f0props = features[0].properties;
+        const wse0 = parseFloat(f0props['wse']);
+        const area0 = parseFloat(f0props['area_total']);
+        const q0 = f0props['quality_f'];
+        document.getElementById('stat-wse').textContent = !isNaN(wse0) ? wse0.toFixed(2) + ' m' : '—';
+        document.getElementById('stat-area').textContent = !isNaN(area0) ? area0.toFixed(1) + ' km²' : '—';
+        const qn = parseFloat(q0);
+        document.getElementById('stat-quality').innerHTML = q0 !== null && q0 !== undefined
+          ? `<span class="badge ${isNaN(qn) ? 'badge-info' : qn === 0 ? 'badge-ok' : qn <= 1 ? 'badge-warn' : 'badge-bad'}" style="font-size:11px">${isNaN(qn) ? q0 : qn === 0 ? '✓' : qn <= 1 ? '⚠' : '✗'}</span>`
+          : '—';
+        document.getElementById('stats-bar').style.display = 'flex';
+      }
+    }
+
+    // ── Navigation ──
+    function navigate(dir) {
+      const next = currentIdx + dir;
+      if (next >= 0 && next < sortedDates.length) showFeature(next);
+    }
+
+    function togglePlay() {
+      const icon = document.getElementById('play-icon');
+      if (playInterval) {
+        clearInterval(playInterval);
+        playInterval = null;
+        icon.className = 'ti ti-player-play';
+        return;
+      }
+      icon.className = 'ti ti-player-pause';
+      playInterval = setInterval(() => {
+        const next = currentIdx + 1;
+        if (next >= sortedDates.length) {
+          clearInterval(playInterval);
+          playInterval = null;
+          icon.className = 'ti ti-player-play';
+          return;
+        }
+        showFeature(next);
+      }, 1200);
+    }
+
+    // ── Chargement GeoJSON ──
+    function getDateField() {
+      return document.getElementById('date-field-select').value;
+    }
+
+    function initTimeline() {
+      const dateF = getDateField();
+      const raw = [...new Set(
+        allFeatures.map(f => f.properties[dateF]).filter(v => v !== null && v !== undefined)
+      )];
+      sortedDates = raw.sort((a, b) => {
+        const da = parseDate(a), db = parseDate(b);
+        if (da && db) return da - db;
+        return String(a).localeCompare(String(b));
+      });
+      const slider = document.getElementById('date-slider');
+      slider.max = sortedDates.length - 1;
+      slider.value = 0;
+      document.getElementById('nav-bar').style.display = 'flex';
+      document.getElementById('anim-bar').style.display = 'block';
+      document.getElementById('info-panel').style.display = 'none';
+      showFeature(0);
+    }
+
+    function loadGeoJSON(text) {
+      let data;
+      try { data = JSON.parse(text); } catch (e) { alert('Fichier GeoJSON invalide ou corrompu.'); return; }
+
+      const features = (data.type === 'FeatureCollection' ? data.features : [data])
+        .filter(f => f && f.properties);
+
+      if (!features.length) { alert('Aucune entité géographique trouvée dans ce fichier.'); return; }
+
+      allFeatures = features;
+      document.getElementById('empty-state').style.display = 'none';
+
+      // Détection du champ date
+      const allKeys = Object.keys(features[0].properties);
+      const sel = document.getElementById('date-field-select');
+      sel.innerHTML = '';
+      const likely = allKeys.find(k => DATE_FIELDS.includes(k.toLowerCase())) || allKeys[0];
+      allKeys.forEach(k => {
+        const o = document.createElement('option');
+        o.value = k; o.textContent = k;
+        if (k === likely) o.selected = true;
+        sel.appendChild(o);
+      });
+      document.getElementById('date-field-wrap').style.display = 'flex';
+
+      // Vérif champ qualité
+      hasQualityField = allKeys.includes('quality_f');
+      const legendEl = document.getElementById('legend');
+      const legendWse = document.getElementById('legend-wse');
+      legendEl.style.display = 'flex';
+      legendWse.style.display = hasQualityField ? 'none' : 'flex';
+
+      initTimeline();
+    }
+
+    // ── Drag & Drop ──
+    function handleDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+
+    function handleDragLeave() {
+      document.getElementById('drop-zone').classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      const f = e.dataTransfer.files[0];
+      if (f) readFile(f);
+    }
+
+    function handleFileInput(e) {
+      const f = e.target.files[0];
+      if (f) readFile(f);
+    }
+
+    function readFile(f) {
+      const r = new FileReader();
+      r.onload = ev => loadGeoJSON(ev.target.result);
+      r.readAsText(f);
+    }
+
+    // ── Raccourcis clavier ──
+    document.addEventListener('keydown', e => {
+      if (!sortedDates.length) return;
+      if (e.key === 'ArrowLeft') navigate(-1);
+      else if (e.key === 'ArrowRight') navigate(1);
+      else if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+    });
+  </script>
+
+
+</body></html>
